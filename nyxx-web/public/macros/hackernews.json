@@ -1,0 +1,8 @@
+{
+  "name": "hackernews",
+  "method": "POST",
+  "input_kind": "text",
+  "output_kind": "text",
+  "description": "Fetches and returns copied developer news text.",
+  "use_when": "Use when you want latest developer news copied from a target page."
+}

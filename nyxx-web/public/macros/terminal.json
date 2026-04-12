@@ -1,0 +1,8 @@
+{
+  "name": "terminal",
+  "method": "POST",
+  "input_kind": "text",
+  "output_kind": "text",
+  "description": "Opens terminal, pastes command, and returns copied output.",
+  "use_when": "Use when you want to run pasted terminal commands through your recorded flow."
+}

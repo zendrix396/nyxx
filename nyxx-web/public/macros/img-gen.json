@@ -1,0 +1,8 @@
+{
+  "name": "img-gen",
+  "method": "POST",
+  "input_kind": "text",
+  "output_kind": "image",
+  "description": "Generates image from text input and returns clipboard image data.",
+  "use_when": "Use when you want to create visuals and extract the resulting image via clipboard."
+}

@@ -1,0 +1,5 @@
+.cursor/
+issue-bodies/
+Cargo.lock
+Krona-Lite-main/
+package-lock.json
