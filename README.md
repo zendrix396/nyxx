@@ -1,76 +1,71 @@
-# Nyx Agent
+# Nyxx
+**MCP for Desktop Automation through Macro Recordings**
 
-An AI agent that lives on your machine and gets things done. Less instructing, more achieving.
+Nyxx connects conversational AI to local desktop execution. By integrating with **[OpenClaw](https://github.com/openclaw/openclaw)** via the Model Context Protocol (MCP), Nyxx allows you to trigger local OS macros using natural language chat commands (WhatsApp, Telegram). 
 
-## What's This All About?
+Many legacy enterprise systems, walled gardens, and native apps lack REST APIs. Nyxx solves this by automating the physical UI layer and using the system clipboard as middleware to pass data between the LLM and the application. You can record a workflow once, save the macro profile, and share it so others can run complex automations without manual setup.
 
-Standard voice assistants are sandboxed. They can't interact with your desktop, manage your files, or use your local tools. They're glorified search engines with a voice.
+## Core Use Case
 
-Nyx is different. It's an agent that has full access to your machine's environment (just like you do). It sees your screen, controls your mouse and keyboard, and runs commands. You don't tell it *how* to do something; you just state your goal.
+You text: *"Get this week's metrics from the accounting app and summarize them."*
 
-> **User:** "Hey Nyx, find all the PDFs I downloaded this week, summarize each one, and move them into my 'Reading List' folder."
->
-> **Nyx:** *Scans the default Downloads folder using a high-speed file search tool. Filters the results by creation date. For each PDF, it uses an OCR tool to extract the text, sends it to an LLM for summarization, and saves the summary. Finally, it uses a file system tool to create the 'Reading List' folder and move the original PDFs into it.*
+1. **Intent:** OpenClaw parses the request and calls the `nyxx-macro-control` skill via the local API (`127.0.0.1:4777`).
+2. **Execution:** Nyxx runs a pre-recorded macro that brings the offline accounting app to the foreground, navigates to the report, and triggers "Copy to Clipboard".
+3. **Extraction:** Nyxx intercepts the raw data from the OS clipboard and returns it to OpenClaw.
+4. **Delivery:** OpenClaw summarizes the dense financial data and replies directly in your chat.
 
-Want the full breakdown of the vision, the core problems it solves, and how it works?
-**Check out the vision doc: [`docs/About.md`](docs/About.md)**
+## Key Features
 
----
+* **Local REST API:** Exposes your recorded macros to local AI agents securely via `127.0.0.1:4777`.
+* **Clipboard Middleware:** Pass dynamic text and images between the LLM and local apps without needing official integrations.
+* **Record and Share:** Record mouse movements and keystrokes via the Svelte GUI. Download and run community-created profiles instantly.
+* **Background Jobs:** Leverage OpenClaw's heartbeat system to run scheduled tasks like clearing inboxes or scraping data.
+* **Autonomous Vision (WIP):** Evolving from fixed X/Y coordinates to local computer vision models to find and interact with UI elements dynamically.
+
+## Architecture
+
+* **Orchestrator:** Rust (Tauri) for state management and low-level I/O (`rdev`, `enigo`).
+* **Local Server:** Axum for handling OpenClaw API requests.
+* **Frontend:** Svelte for the macro management GUI.
+* **LLM Integration:** OpenClaw for converting human intent into JSON-RPC/MCP tool calls.
+
+## API Endpoints
+
+The `nyxx-macro-control` skill allows OpenClaw to interface with these core endpoints:
+* `GET /macros` - List available macros and their I/O requirements.
+* `POST /macros/:name/invoke` - Inject payload into clipboard and run the macro.
+* `POST /mouse/move` & `/mouse/drag` - Autonomous cursor control.
+* `POST /macros/stop` - Global kill switch.
 
 ## Getting Started
 
-You'll need the latest stable versions of Rust, Node.js, and Python (for scripting tools).
+### Prerequisites
+* Rust (latest stable)
+* Node.js (v18+)
+*[OpenClaw](https://openclaw.ai) running locally
 
-1.  **Clone the repo:**
-    ```bash
-    git clone https://github.com/your-username/nyx-agent.git
-    cd nyx-agent
-    ```
+### Installation
 
-2.  **Install frontend dependencies:**
-    ```bash
-    npm install
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/nyxx.git
+   cd nyxx
+   ```
 
-3.  **Build the workspace:**
-    This compiles the core Rust backend.
-    ```bash
-    cargo build --release
-    ```
+2. **Install frontend dependencies:**
+   ```bash
+   cd src
+   npm install
+   ```
 
-4.  **Run the tests:**
-    Make sure all core components are functioning correctly.
-    ```bash
-    cargo test --workspace
-    ```
+3. **Start the application:**
+   ```bash
+   cargo tauri dev
+   ```
 
-5.  **Run Nyx Agent in development mode:**
-    This starts the Tauri app with hot-reloading for the frontend.
-    ```bash
-    cargo tauri dev
-    ```
+4. **Connect to OpenClaw:**
+   Copy the `nyxx-macro-control` folder from this repository into your local OpenClaw `.agents/skills/` directory. OpenClaw will automatically discover the Nyxx API.
 
----
+## Security
 
-## Repo Layout
-
-The project is a monorepo containing the core application and its documentation.
-
--   `src-tauri/`: The heart of the agent. A Rust application containing:
-    -   `src/orchestrator`: Manages the main state machine and the cognitive loop.
-    -   `src/modules`: Contains the Perception, Cognition, Tooling, and Knowledge modules.
-    -   `src/tools`: The library of built-in and user-generated MCP tools.
--   `src/`: The face. A Svelte frontend for the settings UI, macro manager, and status overlay.
--   `docs/`: All project documentation.
-
-For a deeper dive into the "why" behind this structure and how all the pieces interact, see [`docs/Architecture.md`](docs/Architecture.md).
-
----
-
-## Want to Contribute?
-
-Awesome. We'd love the help. The best way to start is by tackling an open issue.
-
-All the specific details on our branching strategy, how to format your PRs, and our code of conduct are in the contribution guide.
-
-**Please read it here: [`CONTRIBUTING.md`](CONTRIBUTING.md)**
+Nyxx operates entirely locally. No screen data or recordings are sent to the cloud. The port `4777` is strictly bound to `127.0.0.1` to prevent unauthorized network access. By converting LLM intents into predefined macro workflows, Nyxx acts as a sandbox that prevents the AI from executing arbitrary or destructive shell commands.
