@@ -13,6 +13,103 @@ Many desktop and legacy applications only expose a graphical UI. Nyxx records or
 3. Text or image data is read back via clipboard or API response fields (`output_text`, `output_image_base64` on POST invocations).
 4. The agent summarizes or forwards the result to the user.
 
+## Design
+```mermaid
+flowchart TB
+    %% ==========================================
+    %% TOP ROW: Interfaces & Clients
+    %% ==========================================
+    subgraph Top ["Interfaces & External Clients"]
+        direction LR
+        Agent["External Agent<br/>(OpenClaw / MCP Client)"]
+        UI["Svelte Frontend<br/>(Tauri Webview UI)"]
+        SysUI["System Tray &<br/>Global Hotkey (F4)"]
+    end
+
+    %% ==========================================
+    %% MIDDLE ROW: Rust Core (Two Pillars)
+    %% ==========================================
+    subgraph Middle ["Nyxx Rust Core (Tauri Backend)"]
+        direction LR
+        
+        %% Pillar 1: API, Events, and State
+        subgraph Pillar1 ["API & State Management"]
+            direction TB
+            Axum["Axum Local API<br/>(Port 4777, JSON/B64)"]
+            Runtime["Macro Runtime<br/>(Atomic Cancel Signals)"]
+            Orch{"Orchestrator<br/>(States: IDLE, REC, EXEC)"}
+            Listener["Event Listener<br/>(rdev global hooks)"]
+        end
+
+        %% Pillar 2: The Cognitive/Execution Loop
+        subgraph Pillar2 ["Cognitive & Execution Pipeline"]
+            direction TB
+            Cog["Cognition & Perception<br/>(Intent, Gemini API)"]
+            Engine["Macro Engine<br/>(JSON Deserialization)"]
+            IO["I/O Controller<br/>(Mutex-locked rdev)"]
+            ClipHandler["Clipboard Manager<br/>(Arboard, PowerShell, clip.exe)"]
+        end
+        
+        %% Internal Pillar Connections
+        Axum -->|"REST /invoke"| Runtime
+        Runtime -->|"Thread Mgmt"| Orch
+        Listener -.->|"Buffers Inputs"| Orch
+        
+        Orch ==>|"1. Plans Task"| Cog
+        Orch ==>|"2. Routes Macro"| Engine
+        Engine ==>|"3. Timed Playback"| IO
+        Axum -->|"4. Injects Data"| ClipHandler
+    end
+
+    %% ==========================================
+    %% BOTTOM ROW: Environment & OS Layer
+    %% ==========================================
+    subgraph Bottom ["Environment, OS & Cloud"]
+        direction LR
+        Cloud["Google Gemini API<br/>(LLM Inference)"]
+        FS[(Local File System<br/>macro-profiles/*.json)]
+        OSHost["Host Operating System<br/>(Input & Display)"]
+        Secrets["System Keyring<br/>(API Keys)"]
+    end
+
+    %% ==========================================
+    %% CROSS-ROW CONNECTIONS
+    %% ==========================================
+    
+    %% Top to Middle
+    Agent -->|"HTTP POST/GET"| Axum
+    UI <-->|"Tauri IPC (invoke/listen)"| Orch
+    UI -->|"Configures"| Engine
+    SysUI -->|"Toggle Window"| Orch
+
+    %% Middle to Bottom
+    Cog <-->|"Prompts/Responses"| Cloud
+    Cog -->|"Reads Key"| Secrets
+    Engine <-->|"Read/Write"| FS
+    
+    %% OS Level Connections
+    IO -.->|"Simulates Clicks/Keys"| OSHost
+    ClipHandler <-->|"Reads/Writes Data"| OSHost
+    Listener -.->|"Captures Activity"| OSHost
+
+    %% ==========================================
+    %% THEMING
+    %% ==========================================
+    classDef ext fill:#1e293b,stroke:#cbd5e1,stroke-width:2px,color:#f8fafc;
+    classDef core fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#ffffff;
+    classDef util fill:#3b82f6,stroke:#2563eb,stroke-width:1px,color:#ffffff;
+    classDef db fill:#10b981,stroke:#047857,stroke-width:2px,color:#ffffff;
+    classDef ui fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#ffffff;
+    classDef state fill:#eab308,stroke:#a16207,stroke-width:3px,color:#ffffff;
+
+    class Agent,Cloud,OSHost ext;
+    class Engine,IO,Cog core;
+    class Axum,Runtime,Listener,ClipHandler util;
+    class Orch state;
+    class FS,Secrets db;
+    class UI,SysUI ui;
+```
+
 ## Repository layout
 
 | Path | Role |
